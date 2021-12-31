@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<title>Science Research</title>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+</head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Montserrat">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="/css/bootstrap.css">
+<link rel="stylesheet" href="/css/font-awesome.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+<style>
+body,h1,h2,h3,h4,h5,h6 {font-family: "Lato", sans-serif}
+.w3-bar,h1,button {font-family: "Montserrat", sans-serif}
+.fa-anchor,.fa-coffee {font-size:200px}
+.float-left-child {
+  float: left;
+}
+.inline-block-child {
+  display: inline-block;
+}
+
+.center {
+    position: relative;
+    left: 40%;
+    top: 50%;
+    transform: translate(-17%, 40%);
+}
+
+.below {
+    position: relative;
+    left:40%;
+    top: 60%;
+    transform: translate(0%, 90%);
+}
+.WebContainer{
+    width: 100%;
+    height: auto;
+}
+.articles{
+    width:90%; /*Takes 90% width from WebContainer*/
+    height: auto;
+    margin: auto;
+}
+
+.update {
+  background-color: #3455eb;
+  color: white;
+  cursor: pointer;
+  text-align:center;
+}
+.update:hover {
+  background-color: #3471eb;
+}
+
+.add {
+  background-color: #eb0c1e;
+  color: white;
+  cursor: pointer;
+  text-align:center;
+}
+.add:hover {
+  background-color: #d90919;
+}
+
+</style>
+<body>
+
+<!-- Navbar -->
+<div class="w3-top">
+  <div class="w3-bar w3-red w3-card w3-left-align w3-large">
+    <a class="w3-bar-item w3-button w3-hide-medium w3-hide-large w3-right w3-padding-large w3-hover-white w3-large w3-red" href="javascript:void(0);" onclick="myFunction()" title="Toggle Navigation Menu"><i class="fa fa-bars"></i></a>
+    <a href="/" class="w3-bar-item w3-button w3-padding-large w3-white">Home</a>
+    <a href="/login" class="w3-bar-item w3-button w3-hide-small w3-padding-large w3-hover-white">Login</a>
+  </div>
+
+</div>
+
+<!-- Header -->
+<header class="w3-container w3-red w3-center" style="padding:5%">
+  <br></br>
+  <h1 class="w3-margin w3-jumbo">Info for {{session['student']}}</h1>
+</header>
+
+<!-- First Grid -->
+<div class="center">
+<form action="#" method="post">
+    <div class='child inline-block-child'>
+    <div class="col-auto" >
+        <label class="visually-hidden" for="name" >Name</label>
+        <input class="form-control" placeholder="Name" name="name">
+    </div>
+    </div>
+    <div class='child inline-block-child'>
+    <div class="col-auto" >
+        <label class="visually-hidden" for="email">Email</label>
+        <input class="form-control" placeholder="Email" name="email">
+    </div>
+    </div>
+    <div class='child inline-block-child'>
+    <div class="col-auto">
+        <label class="visually-hidden" for="necessaryMinutes">Necessary Minutes</label>
+        <input class="form-control" placeholder="Necessary Minutes" name="necessaryMinutes">
+    </div>
+    </div>
+    <div class='child inline-block-child'>
+        {% if session['ischecked'] == true %}
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked" name="exemption" checked>
+                <label class="form-check-label" for="flexSwitchCheckChecked">Exempt Student (toggling on means exempt)</label>
+            </div>
+        {% else %}
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault" name="exemption">
+                <label class="form-check-label" for="flexSwitchCheckDefault">Exempt Student (toggling on means exempt)</label>
+            </div>
+        {% endif %}
+    </div>
+    <br></br>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Update Info</button>
+    </div>
+    <br></br>
+    <div class="col-auto">
+        <button type="submit" name="delete" value="delete" class="btn btn-danger">Delete Student</button>
+    </div>
+</form>
+</div>
+<div class="below">
+    <h3>
+       Name: {{session['student']}} <br></br>
+       Email: {{session['email']}} <br></br>
+       Minutes Remaining: {{session['MinutesRemaining']}}
+    </h3>
+</div>
