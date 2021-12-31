@@ -33,8 +33,7 @@ def get_password():
 
 def update_password(password):
     query = 'UPDATE login SET password = \''+password+'\' WHERE password = \''+get_password()+'\''
-    print(query)
     cur.execute(query)
     conn.commit()
 
-add_student("hello")
+update_password("test")
