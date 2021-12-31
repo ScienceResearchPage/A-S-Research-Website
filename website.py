@@ -2,7 +2,7 @@ from flask import Flask, url_for, redirect, render_template, request, flash, ses
 import smtplib, ssl, os, imaplib, email, csv, urllib
 from lxml import etree
 from datetime import datetime
-from database import get_password
+from database import get_password, add_student
 
 EMAIL_ADDRESS = "scienceresearchbot@gmail.com"
 EMAIL_PASSWORD = "SciRes123"
@@ -147,6 +147,7 @@ def admin():
 				newStudent = Student(request.form.get('name'), 200, "", False)
 				students[newStudent.getName()] = newStudent
 				session["student"] = newStudent.getName()
+				add_student(newStudent.getName())
 				return redirect("/student")
 			return redirect("/admin")
 		if("OrderForm" in request.form):

@@ -11,12 +11,20 @@ cur = conn.cursor()
 # db_version = cur.fetchone()
 # print(db_version)
 
+
+#Student
+def add_student(name):
+    query = "INSERT INTO student_attributes (student_name) VALUES (%s)"
+    cur.execute(query, [name])
+    conn.commit()
+
 def student_list():
     query = 'SELECT student_name FROM student_attributes'
     cur.execute(query)
     exec = cur.fetchall()
     return list(map(lambda x: x[0], exec))
 
+#Login
 def get_password():
     query = 'SELECT password FROM login'
     cur.execute(query)
@@ -28,3 +36,5 @@ def update_password(password):
     print(query)
     cur.execute(query)
     conn.commit()
+
+add_student("hello")
