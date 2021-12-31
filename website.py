@@ -2,6 +2,7 @@ from flask import Flask, url_for, redirect, render_template, request, flash, ses
 import smtplib, ssl, os, imaplib, email, csv, urllib
 from lxml import etree
 from datetime import datetime
+from database import get_password
 
 EMAIL_ADDRESS = "scienceresearchbot@gmail.com"
 EMAIL_PASSWORD = "SciRes123"
@@ -123,7 +124,7 @@ def adminLogin():
 	session.pop('_flashes', None)
 	if request.method == "POST":
 		login = request.form["password"]
-		currentPassword = checkForResetPass()
+		currentPassword = get_password()
 		if login != currentPassword:
 			flash("Incorrect Password", "info")
 		else:
