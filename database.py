@@ -1,4 +1,5 @@
 import psycopg2
+from datetime import datetime
 conn = psycopg2.connect(
     host="ec2-3-232-13-123.compute-1.amazonaws.com",
     database="dhp4uj4dit0ef",
@@ -127,5 +128,29 @@ def delete_student_fair(name, fair):
     cur.execute(query)
     conn.commit()
 
+#------------------student_entries-----------------------#
+#Getters
+def get_student_names_without_end():
+    query = 'SELECT student_name FROM student_entries WHERE end_time IS NULL'
+    cur.execute(query)
+    exec = cur.fetchall()
+    return list(map(lambda x: x[0], exec))
 
-delete_student_fair("ishaan", "wac")
+def get_unconfirmed_entries():
+    query = 'SELECT student_name FROM student_entries WHERE end_time IS NOT NULL'
+    cur.execute(query)
+    exec = cur.fetchall()
+    return list(map(lambda x: x[0], exec))
+
+#Setters
+def add_student_start(name, time):
+    query = "INSERT INTO student_entries (student_name, start_time) VALUES (%s, %s)"
+    cur.execute(query, (name, time))
+    conn.commit()
+
+def update_student_end(name, time):
+    query = 'UPDATE student_entries SET end_time = \'' + time + '\' WHERE student_name = \'' + name + '\''
+    cur.execute(query, (name, time))
+    conn.commit()
+
+update_student_end("Ishaan", '2')
