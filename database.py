@@ -39,7 +39,7 @@ def get_confirmed_minutes(name):
     exec = cur.fetchone()
     return exec[0]
 
-def get_status(name):
+def get_exempt(name):
     query = 'SELECT exempt FROM student_attributes WHERE student_name = \'' + name + '\''
     cur.execute(query)
     exec = cur.fetchone()
@@ -109,6 +109,12 @@ def students_from_fair(fair):
     cur.execute(query)
     exec = cur.fetchall()
     return list(map(lambda x: x[0], exec))
+
+def get_fairs(name):
+    query = 'SELECT fair FROM student_fairs WHERE student_name = \'' + name + '\''
+    cur.execute(query)
+    exec = cur.fetchall()
+    return len(list(map(lambda x: x[0], exec)))
 
 #Setters
 def add_student_to_fair(name, fair):

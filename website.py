@@ -2,7 +2,7 @@ from flask import Flask, url_for, redirect, render_template, request, flash, ses
 import smtplib, ssl, os, imaplib, email, csv, urllib
 from lxml import etree
 from datetime import datetime
-from database import get_password, add_student
+from database import *
 
 EMAIL_ADDRESS = "scienceresearchbot@gmail.com"
 EMAIL_PASSWORD = "SciRes123"
@@ -16,7 +16,6 @@ app.secret_key = "super secret key"
 class Student:
 	name = ""
 	fairs = 0
-	grade = 0
 	minutes = 0
 	unconfirmedMinutes = 0
 	confirmedMinutes = 0
@@ -39,12 +38,6 @@ class Student:
 		return self.fairs
 	def addFairs(self, num):
 		self.fairs+=num
-	def getGrade(self):
-		updateGrade()
-		return grade
-	def updateGrade(self):
-		#Infinite Campus
-		pass
 	def getMinutes(self):
 		return self.minutes
 	def updateMinutes(self, minutes):
@@ -76,13 +69,14 @@ class Student:
 
 
 
-def addStudent(student):
-	students[student.getName()] = student
-
 students = {}
 fairs = {}
 firstClick = None
 
+def makeStudentList():
+	names = student_list()
+	for name in names:
+		students[name] = Student(name, get_necessary_minutes(name), get_email(name), get_exempt(name))
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -124,6 +118,7 @@ def adminLogin():
 	session.pop('_flashes', None)
 	if request.method == "POST":
 		login = request.form["password"]
+		update_password(checkForResetPass())
 		currentPassword = get_password()
 		if login != currentPassword:
 			flash("Incorrect Password", "info")
