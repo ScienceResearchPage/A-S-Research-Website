@@ -16,7 +16,6 @@ app.secret_key = "super secret key"
 class Student:
 	name = ""
 	fairs = 0
-	minutes = 0
 	unconfirmedMinutes = 0
 	confirmedMinutes = 0
 	necessaryMinutes = 0
@@ -35,22 +34,19 @@ class Student:
 	def updateName(self, name):
 		self.name = name
 	def getFairs(self):
+		self.fairs = get_fairs(self.name)
 		return self.fairs
-	def addFairs(self, num):
-		self.fairs+=num
-	def getMinutes(self):
-		return self.minutes
-	def updateMinutes(self, minutes):
-		self.minutes+=minutes
 	def getNecessaryMinutes(self):
 		return self.necessaryMinutes
 	def updateNecessaryMinutes(self, minutes):
 		self.necessaryMinutes = minutes
 	def getUnconfirmedMinutes(self):
+		self.unconfirmedMinutes = get_unconfirmed_minutes(self.name)
 		return self.unconfirmedMinutes
 	def updateUnconfirmedMinutes(self, unconfirmedMinutes):
 		self.unconfirmedMinutes+=unconfirmedMinutes
 	def getConfirmedMinutes(self):
+		self.confirmedMinutes = get_confirmed_minutes(self.name)
 		return self.confirmedMinutes
 	def updateConfirmedMinutes(self, ConfirmedMinutes):
 		self.ConfirmedMinutes+=ConfirmedMinutes
@@ -70,13 +66,17 @@ class Student:
 
 
 students = {}
-fairs = {}
 firstClick = None
 
 def makeStudentList():
 	names = student_list()
 	for name in names:
 		students[name] = Student(name, get_necessary_minutes(name), get_email(name), get_exempt(name))
+		students[name].getFairs()
+		students[name].getUnconfirmedMinutes()
+		students[name].getConfirmedMinutes()
+
+makeStudentList()
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -189,7 +189,7 @@ def studentInfo():
 def assignFair():
 	session['listOfStudents'] = []
 	session['assigned'] = []
-	session['headers'] = list(fairs.keys())
+	session['headers'] = fairs_list()
 	for student in students.keys():
 		if students[student].getFairs() == 0:
 			session['assigned'].append(students[student].getName())
@@ -201,7 +201,7 @@ def assignFair():
 		global firstClick
 		if 'newFair' in request.form:
 			if 'fairName' in request.form and request.form.get('fairName') != '':
-				fairs[request.form.get('fairName')] = set()
+				add_fair('fairName')
 			firstClick = None
 			return redirect("/fair")
 
@@ -210,19 +210,18 @@ def assignFair():
 		else:
 			if 'student' in firstClick and 'header' in request.form:
 				students[firstClick['student']].addFairs(1)
-				fairs[request.form.get('header')].add(firstClick['student'])
+				add_student_to_fair(firstClick['student'],request.form.get('header'))
 				firstClick = None
 				return redirect("/fair")
 
 			if 'header' in firstClick and 'delete' in request.form:
-				fairs.pop(firstClick['header'])
+				delete_fair(firstClick['header'])
 				firstClick = None
 				return redirect("/fair")
 
 			for header in session['headers']:
 				if header in firstClick and 'delete' in request.form:
-					students[firstClick[header]].addFairs(-1)
-					fairs[header].remove(firstClick[header])
+					delete_student_fair(firstClick[header], header)
 					firstClick = None
 					return redirect("/fair")
 
@@ -233,19 +232,19 @@ def assignFair():
 def tableify():
 	maximumNumberOfStudents = 0
 	for header in session['headers']:
-		maximumNumberOfStudents = max(maximumNumberOfStudents, len(fairs.get(header)))
+		maximumNumberOfStudents = max(maximumNumberOfStudents, len(students_from_fair(header)))
 
-	session['values'] = [[0]*len(fairs.keys())]
-	session['correspondingHeaders'] = [[0]*len(fairs.keys())]
+	session['values'] = [[0]*len(fairs_list())]
+	session['correspondingHeaders'] = [[0]*len(fairs_list())]
 	for i in range(maximumNumberOfStudents-1):
-		session['values'].append([0]*len(fairs.keys()))
-		session['correspondingHeaders'].append([0]*len(fairs.keys()))
+		session['values'].append([0]*len(fairs_list()))
+		session['correspondingHeaders'].append([0]*len(fairs_list()))
 
 	for i in range(maximumNumberOfStudents):
 		for header in range(len(session['headers'])):
 			curr = list(session['headers'])[header]
-			if(len(fairs[curr]) > i):
-				session['values'][i][header] = list(fairs[curr])[i]
+			if(len(students_from_fair(curr)) > i):
+				session['values'][i][header] = list(students_from_fair(curr))[i]
 				session['correspondingHeaders'][i][header] = session['headers'][header]
 
 def checkForResetPass():

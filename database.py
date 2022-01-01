@@ -103,7 +103,7 @@ def fairs_list():
     query = 'SELECT fair FROM student_fairs'
     cur.execute(query)
     exec = cur.fetchall()
-    return list(map(lambda x: x[0], exec))
+    return list(set(map(lambda x: x[0], exec)))
 
 def students_from_fair(fair):
     query = 'SELECT student_name FROM student_fairs WHERE fair = \'' + fair + '\''
@@ -118,6 +118,17 @@ def get_fairs(name):
     return len(list(map(lambda x: x[0], exec)))
 
 #Setters
+def add_fair(fair):
+    query = "INSERT INTO student_fairs (fair) VALUES (%s)"
+    cur.execute(query, [fair])
+    conn.commit()
+
+def delete_fair(fair):
+    query = "DELETE FROM student_fairs WHERE fair = \'" + fair + '\''
+    cur.execute(query)
+    conn.commit()
+
+
 def add_student_to_fair(name, fair):
     query = "INSERT INTO student_fairs (student_name, fair) VALUES (%s, %s)"
     cur.execute(query, (name, fair))
@@ -153,4 +164,3 @@ def update_student_end(name, time):
     cur.execute(query, (name, time))
     conn.commit()
 
-update_student_end("Ishaan", '2')
