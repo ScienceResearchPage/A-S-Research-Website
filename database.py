@@ -73,14 +73,22 @@ def toggle_exempt_from_name(name):
     cur.execute(query)
     conn.commit()
 
-def change_necessary_minutes_from_name(name, minutes):
+def change_necessary_minutes(name, minutes):
     query = 'UPDATE student_attributes SET necessary_minutes = ' + str(minutes) + ' WHERE student_name = \'' + name + '\''
     cur.execute(query)
     conn.commit()
 
+def add_unconfirmed_minutes(name, minutes):
+    minutes+=get_unconfirmed_minutes(name)
+    query = 'UPDATE student_attributes SET unconfirmed_minutes = ' + str(minutes) + ' WHERE student_name = \'' + name + '\''
+    cur.execute(query)
+    conn.commit()
 
-
-
+def add_confirmed_minutes(name, minutes):
+    minutes += get_confirmed_minutes(name)
+    query = 'UPDATE student_attributes SET confirmed_minutes = ' + str(minutes) + ' WHERE student_name = \'' + name + '\''
+    cur.execute(query)
+    conn.commit()
 
 #Login
 def get_password():

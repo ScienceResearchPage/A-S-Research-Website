@@ -1,6 +1,5 @@
 from flask import Flask, url_for, redirect, render_template, request, flash, session, Markup, send_file
-import smtplib, ssl, os, imaplib, email, csv, urllib
-from lxml import etree
+import smtplib, imaplib, email, csv, urllib
 from datetime import datetime
 from database import *
 
@@ -40,6 +39,7 @@ class Student:
 		return self.necessaryMinutes
 	def updateNecessaryMinutes(self, minutes):
 		self.necessaryMinutes = minutes
+		change_necessary_minutes(self.name, minutes)
 	def getUnconfirmedMinutes(self):
 		self.unconfirmedMinutes = get_unconfirmed_minutes(self.name)
 		return self.unconfirmedMinutes
@@ -254,13 +254,15 @@ def checkForResetPass():
 	selected_mails = mail.search(None, '(FROM "scienceresearchbot@gmail.com")')[1]
 
 	last = selected_mails[0].split()
+	if(len(last) == 0):
+		return "PassNull"
 	last = last[len(last)-1]
 
 	newPassword = ""
 
 	data = mail.fetch(last, '(RFC822)')[1]
 	bytes_data = data[0][1]
-	#convert the byte data to message
+
 	email_message = email.message_from_bytes(bytes_data)
 
 	for part in email_message.walk():
@@ -303,36 +305,34 @@ def checkIfHoliday():
 
 
 def kmp(pattern, text):
-	match_indices = []
-	pattern_lps = compute_lps(pattern)
+	prefixArray = prefixArrayCompution(pattern)
 
-	patterni = 0
+	pointer = 0
 	for i, ch in enumerate(text):
-		while patterni and pattern[patterni] != ch:
-			patterni = pattern_lps[patterni - 1]
+		while pointer and pattern[pointer] != ch:
+			pointer = prefixArray[pointer - 1]
 
-		if pattern[patterni] == ch:
+		if pattern[pointer] == ch:
 			if patterni == len(pattern) - 1:
 				return True
-
 			else:
-				patterni += 1
+				twoPointer += 1
 	return False
 
 
-def compute_lps(pattern):
-	lps = [0] * len(pattern)
+def prefixArrayCompution(pattern):
+	prefixArray = [0] * len(pattern)
 
-	prefi = 0
+	pointer = 0
 	for i in range(1, len(pattern)):
-		while prefi and pattern[i] != pattern[prefi]:
-			prefi = lps[prefi - 1]
+		while pointer and pattern[i] != pattern[pointer]:
+			pointer = prefixArray[pointer - 1]
 
-		if pattern[prefi] == pattern[i]:
-			prefi += 1
-			lps[i] = prefi
+		if pattern[pointer] == pattern[i]:
+			pointer += 1
+			prefixArray[i] = pointer
 
-	return lps
+	return prefixArray
 
 def addOrderForms():
 	mail = imaplib.IMAP4_SSL('imap.gmail.com')
@@ -360,15 +360,14 @@ def addOrderForms():
 					print("Index Error")
 				break
 
+	#Write to Order Form
 	with open('OrderForms.csv', 'w', newline='') as csvfile:
 		header = ['Group #', 'Group names', 'Grade', 'Period', 'Teacher', 'Supplies', '', 'Quantity', 'Vendor', 'Cost']
 		writer = csv.DictWriter(csvfile, fieldnames=header)
 		writer.writeheader()
 		writer.writerows(fileText)
 
-
-
-addOrderForms()
+#Download Order Form
 def getOrderForm():
 	return send_file('OrderForms.csv', mimetype='text/csv', attachment_filename='OrderForms.csv', as_attachment=True)
 
