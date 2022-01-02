@@ -13,28 +13,6 @@ body,h1,h2,h3,h4,h5,h6 {font-family: "Lato", sans-serif}
 .w3-bar,h1,button {font-family: "Montserrat", sans-serif}
 .fa-anchor,.fa-coffee {font-size:200px}
 
-input,
-.btn {
-  width: 100%;
-  padding: 6px;
-  border: none;
-  border-radius: 4px;
-  margin: 5px 0;
-  opacity: 1;
-  display: inline-block;
-  font-size: 17px;
-  line-height: 20px;
-  text-decoration: none;
-}
-
-input[type=submit] {
-  background-color: #04AA6D;
-  color: white;
-  cursor: pointer;
-}
-input[type=submit]:hover {
-  background-color: #45a049;
-}
 
 .rightside{
   position : absolute;
@@ -69,18 +47,20 @@ input[type=submit]:hover {
   <div class="w3-content">
     <div class="w3-twothird">
       {% block content %}
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            {% for msg in messages %}
-              <div class = "col">
-                <h3 style="text-align:left">{{msg}}
+        {% for i in range(session['studentNames']|length) %}
+            <div class = "col">
+              <h3 style="text-align:left">{{session['nameMessage'][i]}}
                 <div class = "rightside">
-                <input type="submit" name="{{msg}}" value="Start/End Time"></input> </div>
-                </h3>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+                  {% if session['hasStarted'][i] == 'started' %}
+                    <input type="submit" class="btn btn-warning" name="{{session['studentNames'][i]}}" value="End Time"></input>
+                  {% else %}
+                    <input type="submit" class="btn btn-success" name="{{session['studentNames'][i]}}" value="Start Time"></input>
+                  {% endif %}
+                  <input type="submit" class="btn btn-primary" name="{{session['studentNames'][i]}}" value="Meeting"></input>
+                </div>
+              </h3>
+            </div>
+        {% endfor %}
       {% endblock %}
     </div>
   </div>

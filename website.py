@@ -1,5 +1,5 @@
 from flask import Flask, url_for, redirect, render_template, request, flash, session, Markup, send_file
-import smtplib, imaplib, email, csv, urllib
+import smtplib, imaplib, email, csv, urllib, time
 from datetime import datetime
 from database import *
 
@@ -20,7 +20,6 @@ class Student:
 	necessaryMinutes = 0
 	email = ""
 	exempt = False
-	startTime = None
 	def __init__(self, name, necessaryMinutes, email, exempt):
 		self.necessaryMinutes = necessaryMinutes
 		self.email = email
@@ -45,28 +44,29 @@ class Student:
 		return self.unconfirmedMinutes
 	def updateUnconfirmedMinutes(self, unconfirmedMinutes):
 		self.unconfirmedMinutes+=unconfirmedMinutes
+		add_unconfirmed_minutes(self.name, unconfirmedMinutes)
 	def getConfirmedMinutes(self):
 		self.confirmedMinutes = get_confirmed_minutes(self.name)
 		return self.confirmedMinutes
-	def updateConfirmedMinutes(self, ConfirmedMinutes):
-		self.ConfirmedMinutes+=ConfirmedMinutes
+	def updateConfirmedMinutes(self, confirmedMinutes):
+		self.ConfirmedMinutes+=confirmedMinutes
+		add_confirmed_minutes(self.name, confirmedMinutes)
 	def getEmail(self):
 		return self.email
 	def updateEmail(self, email):
 		self.email = email
+		change_email_from_name(self.name, email)
 	def isExempt(self):
 		return self.exempt
 	def toggleExempt(self):
 		self.exempt = not self.exempt
-	def getStartTime(self):
-		return self.startTime
-	def updateStartTime(self, time):
-		self.startTime = time
+		toggle_exempt_from_name(self.name)
 
 
 
 students = {}
 firstClick = None
+hasSignedIn = False
 
 def makeStudentList():
 	names = student_list()
@@ -85,30 +85,36 @@ def home():
 	session["student"] = None
 	session["isAdmin"] = False
 	session.pop('_flashes', None)
+	session["studentNames"] = []
+	session["hasStarted"] = []
+	session["nameMessage"] = []
+	if not hasSignedIn:
+		return redirect("/login")
 	for student in students.keys():
 		if not students[student].isExempt():
-			flash(students[student].getName() + ", Time Needed: " + str(students[student].getNecessaryMinutes() - students[student].getUnconfirmedMinutes() - students[student].getConfirmedMinutes()), "info")
+			session['studentNames'].append(student)
+			if (student in get_student_names_without_end()):
+				session['hasStarted'].append('started')
+			else:
+				session['hasStarted'].append('notStarted')
+			session['nameMessage'].append(students[student].getName() + ", Time Needed: " + str(max(0,students[student].getNecessaryMinutes() - students[student].getUnconfirmedMinutes() - students[student].getConfirmedMinutes())))
 
 	if request.method == "POST":
-		curr = list(request.form.keys())[0]
-		end = 0
-		for i in range(len(curr)):
-			if curr[i] == ',':
-				end = i
-				break
-
-		name = curr[0:end]
+		name = list(request.form.keys())[0]
 		student = students[name]
-		now = datetime.now()
+		now = int(time.time())
 
-		if(student.getStartTime() == None):
-			student.updateStartTime(now)
+		if(name not in get_student_names_without_end()):
+			add_student_start(name, now)
+			return redirect("/")
 		else:
-			time_delta = (now - student.getStartTime())
-			minutes = int(time_delta.total_seconds() / 60)
-			student.updateStartTime(None)
-			student.updateUnconfirmedMinutes(minutes)
-			print(students)
+			time_delta = (now - get_start_time(name))
+			minutes = int(time_delta / 60)
+			if minutes == 0:
+				delete_minute_zero(name)
+			else:
+				update_student_end(name, now)
+				student.updateUnconfirmedMinutes(minutes)
 			return redirect("/")
 	return render_template("index.html")
 
@@ -116,6 +122,7 @@ def home():
 def adminLogin():
 	session.clear()
 	session.pop('_flashes', None)
+	global hasSignedIn
 	if request.method == "POST":
 		login = request.form["password"]
 		update_password(checkForResetPass())
@@ -123,6 +130,9 @@ def adminLogin():
 		if login != currentPassword:
 			flash("Incorrect Password", "info")
 		else:
+			if not hasSignedIn:
+				hasSignedIn = True
+				return redirect("/")
 			session["isAdmin"] = True
 			return redirect("/admin")
 	return render_template("adminlogin.html")
@@ -162,7 +172,7 @@ def studentInfo():
 	currentStudent = students[session["student"]]
 	session["ischecked"] = currentStudent.isExempt()
 	session["email"] = currentStudent.getEmail()
-	session["MinutesRemaining"] = currentStudent.getNecessaryMinutes() - currentStudent.getUnconfirmedMinutes() - currentStudent.getConfirmedMinutes()
+	session["MinutesRemaining"] = max(0,currentStudent.getNecessaryMinutes() - currentStudent.getUnconfirmedMinutes() - currentStudent.getConfirmedMinutes())
 
 	if(request.method == "POST"):
 		if "delete" in request.form:
@@ -191,7 +201,7 @@ def assignFair():
 	session['assigned'] = []
 	session['headers'] = fairs_list()
 	for student in students.keys():
-		if students[student].getFairs() == 0:
+		if get_fairs(student) != 0:
 			session['assigned'].append(students[student].getName())
 		else:
 			session['listOfStudents'].append(students[student].getName())
@@ -209,7 +219,6 @@ def assignFair():
 			firstClick = request.form
 		else:
 			if 'student' in firstClick and 'header' in request.form:
-				students[firstClick['student']].addFairs(1)
 				add_student_to_fair(firstClick['student'],request.form.get('header'))
 				firstClick = None
 				return redirect("/fair")

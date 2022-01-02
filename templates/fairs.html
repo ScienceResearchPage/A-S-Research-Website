@@ -92,12 +92,12 @@ input:hover,
   <button type="submit" name="sideStudents" value="students" class="btn btn-primary">Students</button>
   <button type="submit" name="delete" value="delete" class="btn btn-danger">Delete</button>
   <br></br>
-  {% for student in range(session['assigned']|length) %}
-    <button type="submit" name="student" value="{{session['assigned'][student]}}" class="btn btn-info">{{session['assigned'][student]}}</button>
+  {% for student in range(session['listOfStudents']|length) %}
+    <button type="submit" name="student" value="{{session['listOfStudents'][student]}}" class="btn btn-info">{{session['listOfStudents'][student]}}</button>
     <br></br>
   {% endfor %}
-  {% for student in range(session['listOfStudents']|length) %}
-    <button type="submit" name="student" value="{{session['listOfStudents'][student]}}" class="btn btn-success">{{session['listOfStudents'][student]}}</button>
+  {% for student in range(session['assigned']|length) %}
+    <button type="submit" name="student" value="{{session['assigned'][student]}}" class="btn btn-success">{{session['assigned'][student]}}</button>
     <br></br>
   {% endfor %}
   <input class="form-control" id="newStudent" name="fairName" aria-describedby="newFair" style="width:40%" placeholder="Enter new fair name">

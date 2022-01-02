@@ -58,7 +58,7 @@ def add_student(name):
     cur.execute(query, [name])
     conn.commit()
 
-def change_name_from_name(old_name, new_name):
+def change_name(old_name, new_name):
     query = 'UPDATE student_attributes SET student_name = \'' + new_name + '\' WHERE student_name = \'' + old_name + '\''
     cur.execute(query)
     conn.commit()
@@ -161,6 +161,12 @@ def get_unconfirmed_entries():
     exec = cur.fetchall()
     return list(map(lambda x: x[0], exec))
 
+def get_start_time(name):
+    query = "SELECT start_time FROM student_entries WHERE student_name = \'" + name + '\' AND end_time IS NULL'
+    cur.execute(query)
+    exec = cur.fetchone()
+    return exec[0]
+
 #Setters
 def add_student_start(name, time):
     query = "INSERT INTO student_entries (student_name, start_time) VALUES (%s, %s)"
@@ -168,7 +174,12 @@ def add_student_start(name, time):
     conn.commit()
 
 def update_student_end(name, time):
-    query = 'UPDATE student_entries SET end_time = \'' + time + '\' WHERE student_name = \'' + name + '\''
+    query = 'UPDATE student_entries SET end_time = \'' + str(time) + '\' WHERE student_name = \'' + name + '\' AND end_time IS NULL'
     cur.execute(query, (name, time))
+    conn.commit()
+
+def delete_minute_zero(name):
+    query = 'DELETE FROM student_entries WHERE student_name = \'' + name + '\' AND end_time IS NULL'
+    cur.execute(query)
     conn.commit()
 
