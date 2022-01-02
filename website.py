@@ -313,10 +313,10 @@ def kmp(pattern, text):
 			pointer = prefixArray[pointer - 1]
 
 		if pattern[pointer] == ch:
-			if patterni == len(pattern) - 1:
+			if pointer == len(pattern) - 1:
 				return True
 			else:
-				twoPointer += 1
+				pointer += 1
 	return False
 
 
