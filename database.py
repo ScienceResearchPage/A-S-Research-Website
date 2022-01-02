@@ -163,4 +163,3 @@ def update_student_end(name, time):
     query = 'UPDATE student_entries SET end_time = \'' + time + '\' WHERE student_name = \'' + name + '\''
     cur.execute(query, (name, time))
     conn.commit()
-
