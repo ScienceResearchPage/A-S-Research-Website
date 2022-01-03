@@ -159,6 +159,11 @@ def delete_student_fair(name, fair):
     cur.execute(query)
     conn.commit()
 
+def delete_student(name):
+    query = 'DELETE FROM student_attributes WHERE student_name = \'' + name + '\''
+    cur.execute(query)
+    conn.commit()
+
 #------------------student_entries-----------------------#
 #Getters
 def get_student_names_without_end():

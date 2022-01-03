@@ -80,7 +80,7 @@ input:hover,
       <tr>
         {% for val in range(session['values'][row]|length) %}
         <td>
-          {% if session['values'][row][val] != 0 %}
+          {% if session['values'][row][val] != None and session['values'][row][val] != 0 %}
             <button type="submit" class="btn btn-success" name="{{session['correspondingHeaders'][row][val]}}" value="{{session['values'][row][val]}}" style="width:80%">{{session['values'][row][val]}}</button>
           {% endif %}
         </td>

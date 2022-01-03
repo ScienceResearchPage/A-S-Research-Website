@@ -30,6 +30,7 @@ class Student:
 	def getName(self):
 		return self.name
 	def updateName(self, name):
+		change_name(self.name, name)
 		self.name = name
 	def getFairs(self):
 		self.fairs = get_fairs(self.name)
@@ -212,6 +213,8 @@ def studentInfo():
 	if(request.method == "POST"):
 		if "delete" in request.form:
 			students.pop(currentStudent.getName())
+			delete_student(currentStudent.getName())
+			print("deleted", currentStudent.getName())
 			return redirect("/admin")
 		formExempt = request.form.get("exemption") == "on"
 		if request.form.get("name") != "":
@@ -250,7 +253,7 @@ def assignFair():
 		global firstClick
 		if 'newFair' in request.form:
 			if 'fairName' in request.form and request.form.get('fairName') != '':
-				add_fair('fairName')
+				add_fair(request.form.get('fairName'))
 			firstClick = None
 			return redirect("/fair")
 
