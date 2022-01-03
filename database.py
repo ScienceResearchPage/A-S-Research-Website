@@ -1,5 +1,6 @@
 import psycopg2
 from datetime import datetime
+
 conn = psycopg2.connect(
     host="ec2-3-232-13-123.compute-1.amazonaws.com",
     database="dhp4uj4dit0ef",
@@ -52,6 +53,12 @@ def student_list():
     exec = cur.fetchall()
     return list(map(lambda x: x[0], exec))
 
+def get_meeting(name):
+    query = 'SELECT meeting FROM student_attributes WHERE student_name = \'' + name + '\''
+    cur.execute(query)
+    exec = cur.fetchone()
+    return exec[0]
+
 #Setters
 def add_student(name):
     query = "INSERT INTO student_attributes (student_name) VALUES (%s)"
@@ -70,6 +77,11 @@ def change_email_from_name(name, email):
 
 def toggle_exempt_from_name(name):
     query = 'UPDATE student_attributes SET exempt = NOT exempt WHERE student_name = \'' + name + '\''
+    cur.execute(query)
+    conn.commit()
+
+def toggle_meeting_from_name(name):
+    query = 'UPDATE student_attributes SET meeting = NOT meeting WHERE student_name = \'' + name + '\''
     cur.execute(query)
     conn.commit()
 
@@ -155,11 +167,38 @@ def get_student_names_without_end():
     exec = cur.fetchall()
     return list(map(lambda x: x[0], exec))
 
+def get_student_start_with_end(name):
+    query = 'SELECT start_time FROM student_entries WHERE student_name = \'' + name + '\' AND end_time IS NOT NULL'
+    cur.execute(query)
+    exec = cur.fetchall()
+    return list(map(lambda x: x[0], exec))
+
+def get_student_end(name):
+    query = 'SELECT end_time FROM student_entries WHERE student_name = \'' + name + '\' AND end_time IS NOT NULL'
+    cur.execute(query)
+    exec = cur.fetchall()
+    return list(map(lambda x: x[0], exec))
+
+def get_student_end_with_start(name, start):
+    query = 'SELECT end_time FROM student_entries WHERE student_name = \'' + name + '\' AND start_time = \'' + str(start) + '\' AND end_time IS NOT NULL'
+    cur.execute(query)
+    exec = cur.fetchone()
+    return exec[0]
+
 def get_unconfirmed_entries():
     query = 'SELECT student_name FROM student_entries WHERE end_time IS NOT NULL'
     cur.execute(query)
     exec = cur.fetchall()
-    return list(map(lambda x: x[0], exec))
+    l = []
+    names = list(set(map(lambda x: x[0], exec)))
+    for name in names:
+        starts = get_student_start_with_end(name)
+        ends = get_student_end(name)
+        if(starts == None):
+            continue
+        for i in range(0, len(starts)):
+            l.append(name + " " + str(datetime.fromtimestamp(starts[i])) + "-->" + str(datetime.fromtimestamp(ends[i]))[11:19])
+    return l
 
 def get_start_time(name):
     query = "SELECT start_time FROM student_entries WHERE student_name = \'" + name + '\' AND end_time IS NULL'
@@ -183,3 +222,7 @@ def delete_minute_zero(name):
     cur.execute(query)
     conn.commit()
 
+def delete_start_time(name, start):
+    query = 'DELETE FROM student_entries WHERE student_name = \'' + name + '\' AND start_time = \'' + str(start) + '\''
+    cur.execute(query)
+    conn.commit()

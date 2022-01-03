@@ -56,7 +56,9 @@ body,h1,h2,h3,h4,h5,h6 {font-family: "Lato", sans-serif}
                   {% else %}
                     <input type="submit" class="btn btn-success" name="{{session['studentNames'][i]}}" value="Start Time"></input>
                   {% endif %}
-                  <input type="submit" class="btn btn-primary" name="{{session['studentNames'][i]}}" value="Meeting"></input>
+                  {% if session['needsMeeting'][i] == 'yes' %}
+                    <input type="submit" class="btn btn-primary" name="{{session['studentNames'][i]}}" value="Meeting"></input>
+                  {% endif %}
                 </div>
               </h3>
             </div>

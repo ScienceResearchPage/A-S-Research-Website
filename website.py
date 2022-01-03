@@ -1,6 +1,6 @@
 from flask import Flask, url_for, redirect, render_template, request, flash, session, Markup, send_file
 import smtplib, imaplib, email, csv, urllib, time
-from datetime import datetime
+import datetime
 from database import *
 
 EMAIL_ADDRESS = "scienceresearchbot@gmail.com"
@@ -49,7 +49,7 @@ class Student:
 		self.confirmedMinutes = get_confirmed_minutes(self.name)
 		return self.confirmedMinutes
 	def updateConfirmedMinutes(self, confirmedMinutes):
-		self.ConfirmedMinutes+=confirmedMinutes
+		self.confirmedMinutes+=confirmedMinutes
 		add_confirmed_minutes(self.name, confirmedMinutes)
 	def getEmail(self):
 		return self.email
@@ -57,7 +57,7 @@ class Student:
 		self.email = email
 		change_email_from_name(self.name, email)
 	def isExempt(self):
-		return self.exempt
+		return get_exempt(self.name)
 	def toggleExempt(self):
 		self.exempt = not self.exempt
 		toggle_exempt_from_name(self.name)
@@ -88,11 +88,16 @@ def home():
 	session["studentNames"] = []
 	session["hasStarted"] = []
 	session["nameMessage"] = []
+	session['needsMeeting'] = []
 	if not hasSignedIn:
 		return redirect("/login")
 	for student in students.keys():
 		if not students[student].isExempt():
 			session['studentNames'].append(student)
+			if get_meeting(student):
+				session['needsMeeting'].append('no')
+			else:
+				session['needsMeeting'].append('yes')
 			if (student in get_student_names_without_end()):
 				session['hasStarted'].append('started')
 			else:
@@ -103,6 +108,10 @@ def home():
 		name = list(request.form.keys())[0]
 		student = students[name]
 		now = int(time.time())
+
+		if request.form.get(name) == 'Meeting':
+			toggle_meeting_from_name(name)
+			return redirect("/")
 
 		if(name not in get_student_names_without_end()):
 			add_student_start(name, now)
@@ -143,10 +152,36 @@ def admin():
 	if "isAdmin" not in session or session["isAdmin"] == False:
 		return redirect("/")
 
+	session['entries'] = get_unconfirmed_entries()
+	print(session['entries'])
+
 	for student in students.keys():
 		flash(students[student].getName(), "info")
 
 	if request.method == "POST":
+		if('fairs' in request.form):
+			return redirect("/fair")
+		if('entry' in request.form):
+			entries = request.form.getlist('entry')
+			for entry in entries:
+				name = ""
+				k = 0
+				for i in range(0, len(entry)):
+					if(entry[i].isnumeric()):
+						name = entry[0:i-1]
+						k = i
+						break
+
+				datetimestring = entry[k:k+19]
+				timestamp = int(time.mktime(datetime.strptime(datetimestring, "%Y-%m-%d %H:%M:%S").timetuple()))
+				if "Confirm" in request.form:
+					endtime = get_student_end_with_start(name, timestamp)
+					students[name].updateConfirmedMinutes(int((endtime-timestamp)/60))
+
+				delete_start_time(name, timestamp)
+				return redirect("/admin")
+
+
 		if("newStudent" in request.form):
 			if('name' in request.form):
 				newStudent = Student(request.form.get('name'), 200, "", False)
@@ -197,6 +232,10 @@ def studentInfo():
 
 @app.route("/fair", methods=["POST", "GET"])
 def assignFair():
+
+	if "isAdmin" not in session or session["isAdmin"] == False:
+		return redirect("/")
+
 	session['listOfStudents'] = []
 	session['assigned'] = []
 	session['headers'] = fairs_list()
