@@ -21,6 +21,8 @@ def get_email(name):
     query = 'SELECT email FROM student_attributes WHERE student_name = \'' + name + '\''
     cur.execute(query)
     exec = cur.fetchone()
+    if(exec == None):
+        return None
     return exec[0]
 
 def get_necessary_minutes(name):
@@ -53,6 +55,12 @@ def student_list():
     exec = cur.fetchall()
     return list(map(lambda x: x[0], exec))
 
+def get_unconfirmed_meetings():
+    query = 'SELECT student_name FROM student_attributes WHERE meeting = 1'
+    cur.execute(query)
+    exec = cur.fetchall()
+    return list(map(lambda x: x[0], exec))
+
 def get_meeting(name):
     query = 'SELECT meeting FROM student_attributes WHERE student_name = \'' + name + '\''
     cur.execute(query)
@@ -70,6 +78,11 @@ def change_name(old_name, new_name):
     cur.execute(query)
     conn.commit()
 
+def reset_students():
+    query = "DELETE FROM student_attributes WHERE student_name IS NOT NULL"
+    cur.execute(query)
+    conn.commit()
+
 def change_email_from_name(name, email):
     query = 'UPDATE student_attributes SET email = \'' + email + '\' WHERE student_name = \'' + name + '\''
     cur.execute(query)
@@ -80,8 +93,8 @@ def toggle_exempt_from_name(name):
     cur.execute(query)
     conn.commit()
 
-def toggle_meeting_from_name(name):
-    query = 'UPDATE student_attributes SET meeting = NOT meeting WHERE student_name = \'' + name + '\''
+def update_meeting(name, val):
+    query = 'UPDATE student_attributes SET meeting = \'' + str(val) + '\' WHERE student_name = \'' + name + '\''
     cur.execute(query)
     conn.commit()
 
@@ -99,6 +112,11 @@ def add_unconfirmed_minutes(name, minutes):
 def add_confirmed_minutes(name, minutes):
     minutes += get_confirmed_minutes(name)
     query = 'UPDATE student_attributes SET confirmed_minutes = ' + str(minutes) + ' WHERE student_name = \'' + name + '\''
+    cur.execute(query)
+    conn.commit()
+
+def delete_student(name):
+    query = 'DELETE FROM student_attributes WHERE student_name = \'' + name + '\''
     cur.execute(query)
     conn.commit()
 
@@ -129,7 +147,7 @@ def students_from_fair(fair):
     query = 'SELECT student_name FROM student_fairs WHERE fair = \'' + fair + '\''
     cur.execute(query)
     exec = cur.fetchall()
-    return list(map(lambda x: x[0], exec))
+    return list(set(map(lambda x: x[0], exec)))
 
 def get_fairs(name):
     query = 'SELECT fair FROM student_fairs WHERE student_name = \'' + name + '\''
@@ -148,8 +166,13 @@ def delete_fair(fair):
     cur.execute(query)
     conn.commit()
 
+def reset_fairs():
+    query = "DELETE FROM student_fairs WHERE student_name IS NOT NULL"
+    cur.execute(query)
+    conn.commit()
 
 def add_student_to_fair(name, fair):
+    delete_null_fair(fair)
     query = "INSERT INTO student_fairs (student_name, fair) VALUES (%s, %s)"
     cur.execute(query, (name, fair))
     conn.commit()
@@ -159,10 +182,16 @@ def delete_student_fair(name, fair):
     cur.execute(query)
     conn.commit()
 
-def delete_student(name):
-    query = 'DELETE FROM student_attributes WHERE student_name = \'' + name + '\''
+def delete_null_fair(fair):
+    query = "DELETE FROM student_fairs WHERE student_name IS NULL AND fair = \'" + fair + '\''
     cur.execute(query)
     conn.commit()
+
+def delete_student_fairs(name):
+    query = 'DELETE FROM student_fairs WHERE student_name = \'' + name + '\''
+    cur.execute(query)
+    conn.commit()
+
 
 #------------------student_entries-----------------------#
 #Getters
@@ -222,6 +251,11 @@ def update_student_end(name, time):
     cur.execute(query, (name, time))
     conn.commit()
 
+def reset_entries():
+    query = "DELETE FROM student_entries where student_name IS NOT NULL"
+    cur.execute(query)
+    conn.commit()
+
 def delete_minute_zero(name):
     query = 'DELETE FROM student_entries WHERE student_name = \'' + name + '\' AND end_time IS NULL'
     cur.execute(query)
@@ -231,3 +265,25 @@ def delete_start_time(name, start):
     query = 'DELETE FROM student_entries WHERE student_name = \'' + name + '\' AND start_time = \'' + str(start) + '\''
     cur.execute(query)
     conn.commit()
+
+def delete_student_entries(name):
+    query = 'DELETE FROM student_entries WHERE student_name = \'' + name + '\''
+    cur.execute(query)
+    conn.commit()
+
+#------------------last_ping-----------------------#
+#Getters
+
+def get_last_ping():
+    query = 'SELECT last_ping FROM ping'
+    cur.execute(query)
+    exec = cur.fetchone()
+    return exec[0]
+
+#Setters
+
+def update_last_ping(date):
+    query = 'UPDATE ping SET last_ping = \''+date+'\' WHERE last_ping = \''+get_last_ping()+'\''
+    cur.execute(query)
+    conn.commit()
+

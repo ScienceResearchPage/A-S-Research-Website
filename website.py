@@ -1,6 +1,8 @@
 from flask import Flask, url_for, redirect, render_template, request, flash, session, Markup, send_file
 import smtplib, imaplib, email, csv, urllib, time
 import datetime
+from email.header import decode_header
+from datetime import date
 from database import *
 
 EMAIL_ADDRESS = "scienceresearchbot@gmail.com"
@@ -53,6 +55,7 @@ class Student:
 		self.confirmedMinutes+=confirmedMinutes
 		add_confirmed_minutes(self.name, confirmedMinutes)
 	def getEmail(self):
+		self.email = get_email(self.name)
 		return self.email
 	def updateEmail(self, email):
 		self.email = email
@@ -77,7 +80,65 @@ def makeStudentList():
 		students[name].getUnconfirmedMinutes()
 		students[name].getConfirmedMinutes()
 
+def kmp(pattern, text):
+	prefixArray = prefixArrayCompution(pattern)
+
+	pointer = 0
+	for i, ch in enumerate(text):
+		while pointer and pattern[pointer] != ch:
+			pointer = prefixArray[pointer - 1]
+
+		if pattern[pointer] == ch:
+			if pointer == len(pattern) - 1:
+				return True
+			else:
+				pointer += 1
+	return False
+
+
+def prefixArrayCompution(pattern):
+	prefixArray = [0] * len(pattern)
+
+	pointer = 0
+	for i in range(1, len(pattern)):
+		while pointer and pattern[i] != pattern[pointer]:
+			pointer = prefixArray[pointer - 1]
+
+		if pattern[pointer] == pattern[i]:
+			pointer += 1
+			prefixArray[i] = pointer
+
+	return prefixArray
+
+
+def checkIfHoliday():
+	if(date.today().weekday() >= 5):
+		return
+	d1 = str(date.today().strftime("%Y/%m/%d"))
+	if get_last_ping() == None or get_last_ping() != d1:
+		update_last_ping(d1)
+	else:
+		return
+
+	header= {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) ' 
+		  'AppleWebKit/537.11 (KHTML, like Gecko) '
+		  'Chrome/23.0.1271.64 Safari/537.11',
+		  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+		  'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+		  'Accept-Encoding': 'none',
+		  'Accept-Language': 'en-US,en;q=0.8',
+		  'Connection': 'keep-alive'}
+	req = urllib.request.Request(url="https://www.commackschools.org/protected/MasterCalendar.aspx?dasi=333Y&e=&g=&vs=1G&d=&", headers=header)
+	page = str(urllib.request.urlopen(req).read())
+
+	if not (kmp("Day 1", page) or kmp("Day 2", page)):
+		for student in students:
+			students[student].updateConfirmedMinutes(20)
+
 makeStudentList()
+checkIfHoliday()
+
+
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -92,7 +153,7 @@ def home():
 	session['needsMeeting'] = []
 	if not hasSignedIn:
 		return redirect("/login")
-	for student in students.keys():
+	for student in students:
 		if not students[student].isExempt():
 			session['studentNames'].append(student)
 			if get_meeting(student):
@@ -111,7 +172,7 @@ def home():
 		now = int(time.time())
 
 		if request.form.get(name) == 'Meeting':
-			toggle_meeting_from_name(name)
+			update_meeting(name, 1)
 			return redirect("/")
 
 		if(name not in get_student_names_without_end()):
@@ -154,14 +215,29 @@ def admin():
 		return redirect("/")
 
 	session['entries'] = get_unconfirmed_entries()
-	print(session['entries'])
-
-	for student in students.keys():
-		flash(students[student].getName(), "info")
+	session['meetings'] = get_unconfirmed_meetings()
+	session['studentNames'] = []
+	for student in students:
+		session['studentNames'].append(students[student].getName())
 
 	if request.method == "POST":
+		if('nweek' in request.form):
+			resetWeek()
+		if('nyear' in request.form):
+			newYear()
 		if('fairs' in request.form):
 			return redirect("/fair")
+
+		if('meeting' in request.form):
+			meetings = request.form.getlist('meeting')
+			for meeting in meetings:
+				if "Confirm" in request.form:
+					update_meeting(meeting, 2)
+				else:
+					update_meeting(meeting, 0)
+					email = get_email(meeting)
+					if(email != None):
+						sendEmail(email, "Meeting Rejected", "Hi " + meeting + ", this is an automated message from the science research team to notify you that your teacher has rejected your most recent meeting. If you disagree with this decision, please discuss this with your research teacher next class. Thanks")
 		if('entry' in request.form):
 			entries = request.form.getlist('entry')
 			for entry in entries:
@@ -178,25 +254,30 @@ def admin():
 				if "Confirm" in request.form:
 					endtime = get_student_end_with_start(name, timestamp)
 					students[name].updateConfirmedMinutes(int((endtime-timestamp)/60))
+				else:
+					endtime = get_student_end_with_start(name, timestamp)
+					students[name].updateUnconfirmedMinutes(-int((endtime-timestamp)/60))
+					email = get_email(name)
+					if(email != None):
+						sendEmail(email, "Time Rejected", "Hi " + name + ", this is an automated message from the science research team to notify you that your teacher has rejected your logged time at " + datetimestring + ". If you disagree with this decision, please discuss this with your research teacher next class. Thanks")
 
 				delete_start_time(name, timestamp)
-				return redirect("/admin")
-
 
 		if("newStudent" in request.form):
 			if('name' in request.form):
 				newStudent = Student(request.form.get('name'), 200, "", False)
 				students[newStudent.getName()] = newStudent
-				session["student"] = newStudent.getName()
 				add_student(newStudent.getName())
+				change_necessary_minutes(newStudent.getName(), 200)
+				session["student"] = newStudent.getName()
 				return redirect("/student")
-			return redirect("/admin")
 		if("OrderForm" in request.form):
 			return getOrderForm()
-		else:
-			name = list(request.form.keys())[0]
+		if "student" in request.form:
+			name = request.form.get('student')
 			session["student"] = name
 			return redirect("/student")
+		return redirect("/admin")
 
 	return render_template("admin.html")
 
@@ -209,18 +290,19 @@ def studentInfo():
 	session["ischecked"] = currentStudent.isExempt()
 	session["email"] = currentStudent.getEmail()
 	session["MinutesRemaining"] = max(0,currentStudent.getNecessaryMinutes() - currentStudent.getUnconfirmedMinutes() - currentStudent.getConfirmedMinutes())
-
+	name = currentStudent.getName()
 	if(request.method == "POST"):
 		if "delete" in request.form:
-			students.pop(currentStudent.getName())
-			delete_student(currentStudent.getName())
-			print("deleted", currentStudent.getName())
+			students.pop(name)
+			delete_student(name)
+			delete_student_entries(name)
+			delete_student_fairs(name)
 			return redirect("/admin")
 		formExempt = request.form.get("exemption") == "on"
 		if request.form.get("name") != "":
-			students.pop(currentStudent.getName())
+			students.pop(name)
 			currentStudent.updateName(request.form.get("name"))
-			students[currentStudent.getName()] = currentStudent
+			students[name] = currentStudent
 		if request.form.get("email") != "":
 			currentStudent.updateEmail(request.form.get("email"))
 		if request.form.get("necessaryMinutes") != "":
@@ -235,14 +317,13 @@ def studentInfo():
 
 @app.route("/fair", methods=["POST", "GET"])
 def assignFair():
-
 	if "isAdmin" not in session or session["isAdmin"] == False:
 		return redirect("/")
 
 	session['listOfStudents'] = []
 	session['assigned'] = []
 	session['headers'] = fairs_list()
-	for student in students.keys():
+	for student in students:
 		if get_fairs(student) != 0:
 			session['assigned'].append(students[student].getName())
 		else:
@@ -294,15 +375,16 @@ def tableify():
 	for i in range(maximumNumberOfStudents):
 		for header in range(len(session['headers'])):
 			curr = list(session['headers'])[header]
-			if(len(students_from_fair(curr)) > i):
-				session['values'][i][header] = list(students_from_fair(curr))[i]
+			l = students_from_fair(curr)
+			if(len(l) > i):
+				session['values'][i][header] = l[i]
 				session['correspondingHeaders'][i][header] = session['headers'][header]
 
 def checkForResetPass():
 	mail = imaplib.IMAP4_SSL('imap.gmail.com')
 	mail.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
 	mail.select("INBOX")
-	selected_mails = mail.search(None, '(FROM "scienceresearchbot@gmail.com")')[1]
+	selected_mails = mail.search(None, '(SUBJECT "Password Reset") (FROM "scienceresearchbot@gmail.com")')[1]
 
 	last = selected_mails[0].split()
 	if(len(last) == 0):
@@ -324,6 +406,21 @@ def checkForResetPass():
 
 	return newPassword.strip()
 
+def resetWeek():
+	for student in students:
+		curr = students[student]
+		curr.updateUnconfirmedMinutes(-curr.getUnconfirmedMinutes())
+		curr.updateConfirmedMinutes(-curr.getConfirmedMinutes())
+		update_meeting(student, 0)
+
+def newYear():
+	reset_fairs()
+	reset_students()
+	reset_entries()
+	deleteAllEmails()
+	global students
+	students = {}
+
 def sendEmail(email, subject, body):
 	with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
 		smtp.ehlo()
@@ -339,51 +436,24 @@ imap = imaplib.IMAP4_SSL("imap.gmail.com")
 imap.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
 status, messages = imap.select("INBOX")
 
-
-def checkIfHoliday():
-	header= {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) ' 
-		  'AppleWebKit/537.11 (KHTML, like Gecko) '
-		  'Chrome/23.0.1271.64 Safari/537.11',
-		  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-		  'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-		  'Accept-Encoding': 'none',
-		  'Accept-Language': 'en-US,en;q=0.8',
-		  'Connection': 'keep-alive'}
-
-	req = urllib.request.Request(url="https://www.commackschools.org/protected/MasterCalendar.aspx?dasi=333Y&e=&g=&vs=1G&d=&", headers=header)
-	page = str(urllib.request.urlopen(req).read())
-	return kmp("Day 1", page) or kmp("Day 2", page)
-
-
-def kmp(pattern, text):
-	prefixArray = prefixArrayCompution(pattern)
-
-	pointer = 0
-	for i, ch in enumerate(text):
-		while pointer and pattern[pointer] != ch:
-			pointer = prefixArray[pointer - 1]
-
-		if pattern[pointer] == ch:
-			if pointer == len(pattern) - 1:
-				return True
-			else:
-				pointer += 1
-	return False
-
-
-def prefixArrayCompution(pattern):
-	prefixArray = [0] * len(pattern)
-
-	pointer = 0
-	for i in range(1, len(pattern)):
-		while pointer and pattern[i] != pattern[pointer]:
-			pointer = prefixArray[pointer - 1]
-
-		if pattern[pointer] == pattern[i]:
-			pointer += 1
-			prefixArray[i] = pointer
-
-	return prefixArray
+def deleteAllEmails():
+	imap = imaplib.IMAP4_SSL("imap.gmail.com")
+	imap.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+	imap.select("INBOX")
+	status, messages = imap.search(None, "ALL")
+	messages = messages[0].split(b' ')
+	for mail in messages:
+		_, msg = imap.fetch(mail, "(RFC822)")
+		for response in msg:
+			if isinstance(response, tuple):
+				msg = email.message_from_bytes(response[1])
+				subject = decode_header(msg["Subject"])[0][0]
+				if isinstance(subject, bytes):
+					subject = subject.decode()
+		imap.store(mail, "+FLAGS", "\\Deleted")
+	imap.expunge()
+	imap.close()
+	imap.logout()
 
 def addOrderForms():
 	mail = imaplib.IMAP4_SSL('imap.gmail.com')
@@ -405,12 +475,14 @@ def addOrderForms():
 				message = part.get_payload(decode=True)
 				body += message.decode().strip()
 				lines = body.split("\r")
+				print(lines)
 				try:
-					fileText.append({'Group #':curr+1, 'Group names':lines[0].strip(), 'Grade':lines[2].strip(), 'Period':lines[4].strip(), 'Teacher':lines[6].strip(), 'Supplies':lines[8].strip(), '':'', 'Quantity' : lines[10].strip(), 'Vendor': lines[12].strip(), 'Cost' : lines[14].strip()})
+					fileText.append({'Group #':curr+1, 'Group names':lines[0].strip(), 'Grade':lines[1].strip(), 'Period':lines[2].strip(), 'Teacher':lines[3].strip(), 'Supplies':lines[4].strip(), '':'', 'Quantity' : lines[5].strip(), 'Vendor': lines[6].strip(), 'Cost' : lines[7].strip()})
 				except IndexError:
-					print("Index Error")
+					pass
 				break
 
+	print(fileText)
 	#Write to Order Form
 	with open('OrderForms.csv', 'w', newline='') as csvfile:
 		header = ['Group #', 'Group names', 'Grade', 'Period', 'Teacher', 'Supplies', '', 'Quantity', 'Vendor', 'Cost']
@@ -420,6 +492,7 @@ def addOrderForms():
 
 #Download Order Form
 def getOrderForm():
+	addOrderForms()
 	return send_file('OrderForms.csv', mimetype='text/csv', attachment_filename='OrderForms.csv', as_attachment=True)
 
 

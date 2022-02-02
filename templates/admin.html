@@ -189,15 +189,11 @@ input:checked + .slider:before {
   <div class="w3-content">
     <div class="w3-twothird">
       {% block content %}
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            {% for msg in messages %}
-                <h3 style="text-align:left">
-                <input type="submit" class = "submitButton" name="{{msg}}" value="{{msg}}"></input>
-                </h3>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+        {% for student in session['studentNames'] %}
+            <h3 style="text-align:left">
+            <input type="submit" class = "submitButton" name="student" value="{{student}}"></input>
+            </h3>
+        {% endfor %}
       {% endblock %}
       <input type = "submit" class="orderFormButton" name="OrderForm" value="Order Form">
       <div class="form-group">
@@ -219,10 +215,17 @@ input:checked + .slider:before {
         <input class="form-check-input" type="checkbox" name="entry" value="{{entry}}" id="flexCheckDefault"/>
       <br></br>
       {% endfor %}
+      {% for meeting in session['meetings'] %}
+        <label class="form-check-label" for="flexCheckDefault"><h5>Meeting: {{meeting}}</h5></label>
+        <input class="form-check-input" type="checkbox" name="meeting" value="{{meeting}}" id="flexCheckDefault"/>
+      <br></br>
+      {% endfor %}
         <input type="submit" name="Confirm" value="Confirm" class="btn btn-success" style=" width:50%"></input>
         <input type="submit" name="Reject" value="Reject" class="btn btn-danger" style=" width:50%"></input>
         <br></br>
-        <input type = "submit" class="orderFormButton" name="fairs" value="Fair Assignment Page" style=" width:100%">
+        <input type = "submit" class="orderFormButton" name="fairs" value="Fair Assignment Page" style=" width:100%"><br></br><br></br>
+        <input type="submit" class="orderFormButton" name="nweek" value="New Week" style="width:100%"><br></br>
+        <input type="submit" class="orderFormButton" name="nyear" value="New Year" style="width:100%">
       </div>
 </form>
 
